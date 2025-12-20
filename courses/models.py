@@ -23,8 +23,8 @@ class Course(models.Model):
     price = models.FloatField()
     duration = models.FloatField()
     is_active = models.BooleanField()
-    category = models.ForeignKey(Category,on_delete=models.CASCADE,related_name='course')
-    instructor = models.ForeignKey(User,on_delete=models.CASCADE,related_name='user')
+    category = models.ForeignKey(Category,on_delete=models.CASCADE)
+    instructor = models.ForeignKey(User,on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -36,7 +36,7 @@ class Lesson(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     video = models.FileField(upload_to='media/video_lessons/')
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name='lesson')
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -50,7 +50,7 @@ class Material(models.Model):
     description = models.TextField()
     file_type = models.CharField(max_length=50)
     file = models.FileField(upload_to='media/materials/')
-    course = models.ForeignKey(Course,on_delete=models.CASCADE,related_name='lesson')
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -85,3 +85,5 @@ class QuestionAndAns(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.lesson.title}'
+    
+    # 55:00
