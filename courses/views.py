@@ -162,4 +162,61 @@ def material_list_create(request):
             serializer.save()
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-   
+
+
+@api_view(['GET'])
+def enrollment_list(request):
+    if request.method == 'GET':
+            course = request.query_params.get('courseId')
+
+            if not course:
+                return Response({'details':"You don't have access for this course"})
+            
+            try:
+                course = models.Course.objects.get(pk=course)
+            except models.Course.DoesNotExist:
+                return Response({'details':"this course doesn't exits"})   
+            if request.user.role == 'teacher':
+                    if request.user != course.instructor:
+                        return Response({'details':"You can't see this course enrollment information"})
+                    
+                    enrollments = models.Enrollment.objects.filter(course=course)
+                    serializer = serializers.EnrollmentSerializer(enrollments,many=True)
+                    return Response(serializer.data)
+            elif request.user.role == 'student':    
+                    enrollments = models.Enrollment.objects.filter(student=request.user)
+                    serializer = serializers.EnrollmentSerializer(enrollments,many=True)
+                    return Response(serializer.data)
+            elif request.user.role == 'admin':
+                    enrollments = models.Enrollment.objects.filter(course=course)
+                    serializer = serializers.EnrollmentSerializer(enrollments,many=True)
+                    return Response(serializer.data)
+            else:
+                return Response({'details':'Unauthorized access'},status=status.HTTP_403_FORBIDDEN)
+
+
+@api_view(['POST'])
+def enroll_course(request):
+    if request.user.role != 'student':
+        return Response({'details':'only students or logged in user can enroll'})
+    
+    course = request.data.get('course')
+    payment_method = request.data.get('payment_method','free')
+
+    try:
+        course = models.Course.objects.get(pk=course)
+    except models.Course.DoesNotExist:
+        return Response({'details':'course not found'})
+
+    if models.Enrollment.objects.filter(student=request.user,course=course).exists():
+        return Response({'detail':'you are already enrolled in this course'})    
+    
+    enrollment = models.Enrollment.objects.create(
+        student = request.user,
+        course = course,
+        payment_method = payment_method,
+        status = 'active'
+    )
+    serializer = serializers.EnrollmentSerializer(enrollment)
+    return Response(serializer.data,status=status.HTTP_201_CREATED)
+

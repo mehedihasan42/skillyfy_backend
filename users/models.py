@@ -9,6 +9,9 @@ USER_ROLES = (
 )
 
 class User(AbstractUser):
-    role = models.CharField(max_length=50,choices=USER_ROLES)
+    role = models.CharField(max_length=50,choices=USER_ROLES,default='student')
     mobile_no = models.CharField(max_length=12)
+
+    def __str__(self):
+        return f'{self.username} - {self.role}'
     
