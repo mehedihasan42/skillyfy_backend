@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.urls import path
-from .views import category_list,course_list
+from .views import category_list,course_list,lesson_list_create,material_list_create
 
 urlpatterns = [
     path('category/', category_list,name="category_list"),
     path('cards/', course_list,name="course_list"),
+    path('lesson/', lesson_list_create,name="lesson_list_create"),
+    path('material/', material_list_create,name="material_list_create"),
 ]
