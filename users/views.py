@@ -6,6 +6,7 @@ from .models import User
 from .serializers import UserSerializer,RegisterSerializer
 from django.contrib.auth import authenticate,login
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # Create your views here.
 @api_view(['GET','POST'])
@@ -28,6 +29,15 @@ def user_list_create(request):
             return Response(serializer.data,status=201)
         return Response(serializer.errors,status=400)
 
+# ******************varify email by 4 digit code and forget password and reset password also***************
+
+def get_tokens_for_user(user):
+    refersh = RefreshToken.for_user(user)
+
+    return {
+        'refresh':str(refersh),
+        'access':str(refersh.access_token)
+    }
 
 @api_view(['GET','POST'])
 @permission_classes([AllowAny])
@@ -49,8 +59,17 @@ def register_view(request):
 
     if serializer.is_valid():
         user = serializer.save()
-        login(request,user)
-        return Response({'details':'User register successfull'},status=status.HTTP_201_CREATED)
+        tokens = get_tokens_for_user(user)
+        return Response({
+                "access": tokens["access"],
+                "refresh": tokens["refresh"],
+                "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role
+            }
+        }, status=status.HTTP_200_OK)
     return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -71,12 +90,18 @@ def login_view(request):
     user = authenticate(username=user_obj.username,password=password)  
 
     if user is not None:
-        login(request,user)
-        return Response({'message':'Login successfull',
-                         'user_id':user.id,
-                         'username':user.username,
-                         'email':user.email
-                         },status=status.HTTP_200_OK)  
+        tokens = get_tokens_for_user(user)
+        return Response({
+            'message': 'Login successful',
+            'access':  tokens['access'],
+            'refresh': tokens['refresh'],
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role
+            }
+        }, status=status.HTTP_200_OK)
             
     return Response({'error':'Invalid User'},status=status.HTTP_401_UNAUTHORIZED)
 
