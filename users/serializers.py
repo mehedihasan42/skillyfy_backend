@@ -26,6 +26,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password",
             "confirm_password"
         )
+       
 
     def validate(self,data):
        if data['password'] != data['confirm_password']:

@@ -29,9 +29,22 @@ def user_list_create(request):
         return Response(serializer.errors,status=400)
 
 
-@api_view(['POST'])
+@api_view(['GET','POST'])
 @permission_classes([AllowAny])
 def register_view(request):
+
+    if request.method == 'GET':
+        return Response({
+            "expected_fields": {
+                "username": "string, required",
+                "email": "string, required",
+                "role": "string, required (e.g., 'student', 'teacher')",
+                "mobile_no": "string, required",
+                "password": "string, required",
+                "confirm_password": "string, required"
+            }
+        })
+
     serializer = RegisterSerializer(data=request.data)
 
     if serializer.is_valid():
@@ -44,15 +57,27 @@ def register_view(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    username = request.data.get('username')
+    email = request.data.get('email')
     password = request.data.get('password')
 
-    user = authenticate(username=username,password=password)
+    if not email or not password:
+        return Response({'error':'Email and password are required'},status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user_obj = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({'error':'Invalid email or password'},status=status.HTTP_401_UNAUTHORIZED)
+
+    user = authenticate(username=user_obj.username,password=password)  
 
     if user is not None:
         login(request,user)
-        return Response({'message':'Login successfull','user_id':user.id,'username':user.username,'email':user.email})
-    
+        return Response({'message':'Login successfull',
+                         'user_id':user.id,
+                         'username':user.username,
+                         'email':user.email
+                         },status=status.HTTP_200_OK)  
+            
     return Response({'error':'Invalid User'},status=status.HTTP_401_UNAUTHORIZED)
 
 

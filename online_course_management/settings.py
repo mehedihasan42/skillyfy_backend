@@ -59,7 +59,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "https://example.com",
     "https://sub.example.com",
-    "http://localhost:3000", # Useful for local frontend development
+    "http://localhost:5173", # Useful for local frontend development
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
