@@ -8,6 +8,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
 
 # Create your views here.
 @api_view(['GET', 'POST'])
@@ -85,12 +86,27 @@ def course_list(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
+
+
+@api_view(['GET', 'POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def course_detail(request,pk):
+    course = get_object_or_404(models.Course,pk=pk)
+
+    if request.user.role == 'teacher' and course.instructor != request.user:
+       return Response({'details':'You dont have access to see this course'}, status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = serializers.CourseSerializer(course,context={'request':request})
+
+    return Response(serializer.data,status=status.HTTP_200_OK)
     
 
 @api_view(['GET','POST'])
 def lesson_list_create(request):
    if request.method == 'GET':
         course = request.query_params.get('courseId')
+        print('course id: ',course)
 
         if not course:
             return Response({'details':"You don't have access for this course"})
@@ -102,11 +118,12 @@ def lesson_list_create(request):
 
         is_teacher = request.user.is_authenticated and request.user.role == 'teacher' and request.user == course.instructor
         is_admin =  request.user.is_authenticated and request.user.role == 'admin'
-        is_enrolled = models.Enrollment(
-            student = request.user,
-            course = course,
-            status = 'active'
-        ).exists() if request.user.is_authenticated and request.user.role == 'student' else False
+        is_enrolled = models.Enrollment.objects.filter(
+        student=request.user,
+        course=course,
+        is_active=True
+         ).exists() if request.user.is_authenticated and request.user.role == 'student' else False
+
 
         if not (is_admin or is_teacher or is_enrolled):
             return Response({'details':'You do not have permission for visit this page'})
@@ -140,30 +157,31 @@ def lesson_list_create(request):
 @api_view(['GET','POST'])
 def material_list_create(request):
    if request.method == 'GET':
-        lesson = request.query_params.get('lessonId')
+        course = request.query_params.get('courseId')
+        print('course id: ',course)
 
-        if not lesson:
-            return Response({'details':"You don't have access for this course/lesson"})
+        if not course:
+            return Response({'details':"You don't have access for this course"})
         
         try:
-            lesson = models.Lesson.objects.get(pk=lesson)
-        except models.Lesson.DoesNotExist:
-            return Response({'details':"this lesson doesn't exits"})    
+            course = models.Course.objects.get(pk=course)
+        except models.Course.DoesNotExist:
+            return Response({'details':"this course doesn't exits"})    
 
-        course = lesson.course
         is_teacher = request.user.is_authenticated and request.user.role == 'teacher' and request.user == course.instructor
         is_admin =  request.user.is_authenticated and request.user.role == 'admin'
-        is_enrolled = models.Enrollment(
-            student = request.user,
-            course = course,
-            status = 'active'
-        ).exists() if request.user.is_authenticated and request.user.role == 'student' else False
+        is_enrolled = models.Enrollment.objects.filter(
+        student=request.user,
+        course=course,
+        is_active=True
+         ).exists() if request.user.is_authenticated and request.user.role == 'student' else False
+
 
         if not (is_admin or is_teacher or is_enrolled):
             return Response({'details':'You do not have permission for visit this page'})
         
-        material = models.Material.objects.filter(course=course)
-        serializer = serializers.MaterialSerializer(material,many=True)
+        lesson = models.Material.objects.filter(course=course)
+        serializer = serializers.MaterialSerializer(lesson,many=True)
         return Response(serializer.data)
    
    elif request.method == 'POST':
