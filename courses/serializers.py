@@ -4,12 +4,14 @@ from rest_framework import serializers
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Category
-        fields = ['title','is_active']
+        fields = ['id','title','is_active']
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Category
-        exclude = ('created_at','updated_at')     
+        model = models.Course
+        banner = serializers.ImageField(use_url=True)
+        exclude = ('created_at','updated_at')  
+        read_only_fields = ["instructor"]   
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
