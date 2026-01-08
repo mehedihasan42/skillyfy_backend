@@ -9,6 +9,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+import uuid
+from django.conf import settings
+import requests
 
 # Create your views here.
 @api_view(['GET', 'POST'])
@@ -235,30 +238,109 @@ def enrollment_list(request):
                     return Response(serializer.data)
             else:
                 return Response({'details':'Unauthorized access'},status=status.HTTP_403_FORBIDDEN)
+            
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def buy_course(request,course_id):
+    course = models.Course.objects.get(id=course_id)
+
+    tran_id = str(uuid.uuid4())
+
+    models.Payment.objects.create(
+        student = request.user,
+        course = course,
+        tran_id = tran_id,
+        amount = course.price,
+        status = 'pendding'
+    )
+
+    ssl_data = {
+        'store_id': settings.SSLCOMMERZE_STORE_ID,
+        'store_passwd': settings.SSLCOMMERZE_STORE_PASSWORD,
+        'currency': 'BDT',
+        'product_name': course.title,
+        'cus_name': request.user.username,
+        'cus_email': request.user.email,
+        "tran_id": tran_id,
+        "total_amount": course.price,
+        "success_url": "http://localhost:8000/payment/success/",
+        "fail_url": "http://localhost:8000/payment/fail/",
+        "cancel_url": "http://localhost:8000/payment/cancel/",
+    }
+
+    response = requests.post(settings.SSLCOMMERZE_PAYMENT_URL, data=ssl_data)
+    response_data = response.json()
+
+    return Response({
+        "payment_url": response_data['GatewayPageURL']
+    })
 
 
 @api_view(['POST'])
-def enroll_course(request):
-    if request.user.role != 'student':
-        return Response({'details':'only students or logged in user can enroll'})
-    
-    course = request.data.get('course')
-    payment_method = request.data.get('payment_method','free')
+@permission_classes([IsAuthenticated])
+def payment_success(request):
+    tran_id = request.data.get('tran_id')
 
-    try:
-        course = models.Course.objects.get(pk=course)
-    except models.Course.DoesNotExist:
-        return Response({'details':'course not found'})
+    payment = models.Payment.objects.get(tran_id=tran_id)
 
-    if models.Enrollment.objects.filter(student=request.user,course=course).exists():
-        return Response({'detail':'you are already enrolled in this course'})    
-    
-    enrollment = models.Enrollment.objects.create(
-        student = request.user,
-        course = course,
-        payment_method = payment_method,
-        status = 'active'
+    payment.status = 'success'
+    payment.save()
+
+    enrollment_exist = models.Enrollment.objects.filter(
+        student = payment.student,
+        course = payment.course
     )
-    serializer = serializers.EnrollmentSerializer(enrollment)
-    return Response(serializer.data,status=status.HTTP_201_CREATED)
+
+    if not enrollment_exist:
+        models.Enrollment.objects.create(
+            student = payment.student,
+            course = payment.course,
+            price = payment.amount
+        )
+
+    return Response({'details':'Payment successfull'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_fail(request):
+    tran_id = request.data.get('tran_id')
+    models.Payment.objects.filter(tran_id=tran_id).update(status='fail')
+    return Response({'detail':'Payment fail'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_cancel(request):
+    tran_id = request.data.get('tran_id')
+    models.Payment.objects.filter(tran_id=tran_id).update(status='cancel')
+    return Response({'detail':'Payment fail'})
+
+
+@api_view(['GET','POST'])
+def enroll_course(request):
+   if request.method == 'POST':
+        if request.user.role != 'student':
+          return Response({'details':'only students or logged in user can enroll'})
+    
+        course = request.data.get('course')
+        payment_method = request.data.get('payment_method','free')
+
+        try:
+            course = models.Course.objects.get(pk=course)
+        except models.Course.DoesNotExist:
+            return Response({'details':'course not found'})
+
+        if models.Enrollment.objects.filter(student=request.user,course=course).exists():
+            return Response({'detail':'you are already enrolled in this course'})    
+        
+        enrollment = models.Enrollment.objects.create(
+            student = request.user,
+            course = course,
+            payment_method = payment_method,
+            status = 'active'
+        )
+        serializer = serializers.EnrollmentSerializer(enrollment)
+        return Response(serializer.data,status=status.HTTP_201_CREATED)
 

@@ -73,6 +73,23 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f'{self.student.username} - {self.course.title}'
+
+
+class Payment(models.Model):
+    student = models.ForeignKey(User,on_delete=models.CASCADE)
+    course = models.ForeignKey(Course,on_delete=models.CASCADE)
+    tran_id = models.CharField(max_length=100,unique=True)
+    amount = models.FloatField()
+    status = models.CharField(max_length=20,
+                              choices=[
+                                  ('pendding','Pendding'),
+                                  ('success','Success'),
+                                  ('fail','Fail'),
+                                  ('cancel','Cancel')
+                              ],
+                              
+                              default='pendding')
+    created_at = models.DateTimeField(auto_now_add=True)
     
 
 class QuestionAndAns(models.Model):

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -158,3 +159,10 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=365),  # 1 year
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+
+SSLCOMMERZE_STORE_ID = config('SSLCOMMERZE_STORE_ID')
+SSLCOMMERZE_STORE_PASSWORD = config('SSLCOMMERZE_STORE_PASSWORD')
+SSL_COMMERZ_IS_SANDBOX = True # Set to False for production
+SSLCOMMERZE_PAYMENT_URL = 'https://sandbox.sslcommerz.com/gwprocess/v3/api.php'
+SSLCOMMERZE_VALIDATION_URL = 'https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?wsdl'
