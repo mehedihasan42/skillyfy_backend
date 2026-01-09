@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 import uuid
 from django.conf import settings
 import requests
+from django.shortcuts import redirect
 
 # Create your views here.
 @api_view(['GET', 'POST'])
@@ -59,7 +60,7 @@ def course_list(request):
             )
 
         if request.user.role == 'teacher':
-            queryset = queryset.filter(instructor=request.user)
+            queryset = queryset.filter(instructor=request.user)   
 
         paginator = PageNumberPagination()
         paginator.page_size = 10
@@ -264,9 +265,9 @@ def buy_course(request,course_id):
         'cus_email': request.user.email,
         "tran_id": tran_id,
         "total_amount": course.price,
-        "success_url": "http://localhost:8000/payment/success/",
-        "fail_url": "http://localhost:8000/payment/fail/",
-        "cancel_url": "http://localhost:8000/payment/cancel/",
+        "success_url": "http://localhost:8000/course/payment_success/",
+        "fail_url": "http://localhost:8000/course/payment_fail/",
+        "cancel_url": "http://localhost:8000/course/payment_cancel/",
     }
 
     response = requests.post(settings.SSLCOMMERZE_PAYMENT_URL, data=ssl_data)
@@ -278,7 +279,7 @@ def buy_course(request,course_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def payment_success(request):
     tran_id = request.data.get('tran_id')
 
@@ -299,23 +300,23 @@ def payment_success(request):
             price = payment.amount
         )
 
-    return Response({'details':'Payment successfull'})
+    return redirect(f"http://localhost:5173/payment-success?tran_id={tran_id}")
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def payment_fail(request):
     tran_id = request.data.get('tran_id')
     models.Payment.objects.filter(tran_id=tran_id).update(status='fail')
-    return Response({'detail':'Payment fail'})
+    return redirect(f"http://localhost:5173/payment_fail")
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def payment_cancel(request):
     tran_id = request.data.get('tran_id')
     models.Payment.objects.filter(tran_id=tran_id).update(status='cancel')
-    return Response({'detail':'Payment fail'})
+    return redirect(f"http://localhost:5173/payment_cancel")
 
 
 @api_view(['GET','POST'])
@@ -343,4 +344,19 @@ def enroll_course(request):
         )
         serializer = serializers.EnrollmentSerializer(enrollment)
         return Response(serializer.data,status=status.HTTP_201_CREATED)
+   
+   elif request.method == 'GET':
+        enrollments = models.Enrollment.objects.filter(student=request.user)
+        courses = [e.course for e in enrollments]
+        serializer = serializers.CourseSerializer(courses, many=True) 
+        return Response(serializer.data)
+       
 
+def is_enrolled(request,course_id):
+    if request.user.role == 'student':
+     if not models.Enrollment.objects.filter(
+        student = request.user,
+        course_id = course_id,
+        is_active = True
+      ).exists():
+         return Response({'detail':'Forbidden access. You are not enrolled in this course'})

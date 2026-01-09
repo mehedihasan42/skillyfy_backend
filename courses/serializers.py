@@ -31,4 +31,9 @@ class EnrollmentSerializer(serializers.ModelSerializer):
 class QuestionAndAnsSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.QuestionAndAns
-        exclude = ('created_at','updated_at')            
+        exclude = ('created_at','updated_at')   
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Payment
+        fields = '__all__'
