@@ -51,7 +51,7 @@ def course_list(request):
         queryset = models.Course.objects.all()
 
         if category:
-            queryset = queryset.filter(category__name=category)
+            queryset = queryset.filter(category_id=category)
 
         if search:
             queryset = queryset.filter(
@@ -110,7 +110,6 @@ def course_detail(request,pk):
 def lesson_list_create(request):
    if request.method == 'GET':
         course = request.query_params.get('courseId')
-        print('course id: ',course)
 
         if not course:
             return Response({'details':"You don't have access for this course"})
@@ -162,7 +161,6 @@ def lesson_list_create(request):
 def material_list_create(request):
    if request.method == 'GET':
         course = request.query_params.get('courseId')
-        print('course id: ',course)
 
         if not course:
             return Response({'details':"You don't have access for this course"})
