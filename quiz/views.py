@@ -7,10 +7,12 @@ from rest_framework import status
 
 
 # Create your views here.
+
 @api_view(['GET'])
-def quiz_detail(request,quiz_id):
-    quiz = models.Quiz.objects.get(id=quiz_id)
-    serializer = serializers.QuizSerializers(quiz)
+@permission_classes([IsAuthenticated])
+def quizzes_by_lesson(request, lesson_id):
+    quizzes = models.Quiz.objects.filter(lesson_id=lesson_id)
+    serializer = serializers.QuizSerializers(quizzes, many=True)
     return Response(serializer.data)
 
 
@@ -21,7 +23,7 @@ def submit_answer(request):
 
     if serializer.is_valid():
         models.UserAnswer.objects.update_or_create(
-            user=request.user,
+            student=request.user,
             question=serializer.validated_data['question'],
             defaults={
                 'selected_option': serializer.validated_data['selected_option']
@@ -35,7 +37,7 @@ def submit_answer(request):
 @permission_classes([IsAuthenticated])
 def quiz_result(request, quiz_id):
     answers = models.UserAnswer.objects.filter(
-        user=request.user,
+        student=request.user,
         question__quiz_id=quiz_id
     )
 

@@ -31,7 +31,7 @@ class Option(models.Model):
                 question = self.question,
                 is_correct = True
             ).update(is_correct=False)
-        super.save(*args,**kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.text    

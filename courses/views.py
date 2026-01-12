@@ -26,45 +26,62 @@ def category_list(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 🔐 POST requires authentication
-    if not request.user.is_authenticated or request.user.role != 'admin':
-        return Response(
-            {'detail': 'Forbidden access'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    elif request.metod == 'POST':
+        if not request.user.is_authenticated or request.user.role != 'admin':
+            return Response(
+                {'detail': 'Forbidden access'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-    serializer = serializers.CategorySerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = serializers.CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
+from . import models, serializers
 
 @api_view(['GET', 'POST'])
 @authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Allow GET without token
 def course_list(request):
-
     if request.method == 'GET':
         category = request.query_params.get('category')
         search = request.query_params.get('search')
+
+        # Start with all courses
         queryset = models.Course.objects.all()
 
+        # Filter by category if provided
         if category:
             queryset = queryset.filter(category_id=category)
 
+        # Filter by search text if provided
         if search:
             queryset = queryset.filter(
                 Q(title__icontains=search) |
                 Q(description__icontains=search)
             )
 
-        if request.user.role == 'teacher':
-            queryset = queryset.filter(instructor=request.user)   
+        # if request.user.is_authenticated and getattr(request.user, 'role', None) == 'teacher':
+        #     queryset = queryset.filter(instructor=request.user)
 
+        # Pagination
         paginator = PageNumberPagination()
         paginator.page_size = 10
         paginated_queryset = paginator.paginate_queryset(queryset, request)
+
+        # print("QUERYSET:", queryset)
 
         serializer = serializers.CourseSerializer(
             paginated_queryset,
@@ -74,22 +91,16 @@ def course_list(request):
         return paginator.get_paginated_response(serializer.data)
 
     elif request.method == 'POST':
-        if request.user.role != 'teacher':
-            return Response(
-                {'detail': 'Only teacher can create courses'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Only admin can create
+        if not request.user.is_authenticated or getattr(request.user, 'role', None) != 'admin':
+            return Response({'detail': 'Forbidden access'}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = serializers.CourseSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-
+        serializer = serializers.CourseSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(instructor=request.user)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'POST'])
@@ -350,11 +361,18 @@ def enroll_course(request):
         return Response(serializer.data)
        
 
+@api_view(['GET'])
 def is_enrolled(request,course_id):
-    if request.user.role == 'student':
-     if not models.Enrollment.objects.filter(
+    if request.user.role != 'student':
+        return Response({'details':'Only students can enroll'},status=status.HTTP_403_FORBIDDEN)
+    
+    enrolled = models.Enrollment.objects.filter(
         student = request.user,
         course_id = course_id,
         is_active = True
-      ).exists():
-         return Response({'detail':'Forbidden access. You are not enrolled in this course'})
+    ).exists()
+
+    if enrolled:
+        return Response({'enrolled':True},status=status.HTTP_200_OK)
+    else:
+        return Response({'enrolled':False},status=status.HTTP_200_OK)

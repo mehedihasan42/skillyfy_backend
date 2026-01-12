@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import category_list,course_list,lesson_list_create,material_list_create,enrollment_list,enroll_course,course_detail,buy_course,payment_success,payment_fail,payment_cancel
+from .views import category_list,course_list,lesson_list_create,material_list_create,enrollment_list,enroll_course,course_detail,buy_course,payment_success,payment_fail,payment_cancel,is_enrolled
 
 urlpatterns = [
     path('category/', category_list,name="category_list"),
@@ -14,4 +14,5 @@ urlpatterns = [
     path('payment_success/', payment_success, name='payment_success'),
     path('payment_fail/', payment_fail, name='payment_fail'),
     path('payment_cancel/', payment_cancel, name='payment_cancel'),
+    path('is_enrolled/<int:course_id>/', is_enrolled, name='is_enrolled'),
 ]
