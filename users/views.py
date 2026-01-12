@@ -7,6 +7,7 @@ from .serializers import UserSerializer,RegisterSerializer
 from django.contrib.auth import authenticate,login
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.generics import ListAPIView
 
 # Create your views here.
 @api_view(['GET','POST'])
@@ -31,12 +32,6 @@ def user_list_create(request):
 
 # ******************varify email by 4 digit code and forget password and reset password also***************
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def teacher_list(request):
-    teachers = User.objects.filter(role='teacher')
-    serializer = UserSerializer(teachers,many=True)
-    return Response(serializer.data)
 
 def get_tokens_for_user(user):
     refersh = RefreshToken.for_user(user)
@@ -45,6 +40,12 @@ def get_tokens_for_user(user):
         'refresh':str(refersh),
         'access':str(refersh.access_token)
     }
+
+class TeacherListView(ListAPIView):
+    queryset = User.objects.filter(role="teacher")
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
 
 @api_view(['GET','POST'])
 @permission_classes([AllowAny])

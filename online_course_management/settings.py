@@ -138,8 +138,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR 
+# MEDIA_URL = '/media/'
+# MEDIA_ROOT = BASE_DIR 
 
 
 # Default primary key field type
@@ -165,7 +165,7 @@ SIMPLE_JWT = {
 
 SSLCOMMERZE_STORE_ID = config('SSLCOMMERZE_STORE_ID')
 SSLCOMMERZE_STORE_PASSWORD = config('SSLCOMMERZE_STORE_PASSWORD')
-SSL_COMMERZ_IS_SANDBOX = True # Set to False for production
+SSL_COMMERZ_IS_SANDBOX = True 
 SSLCOMMERZE_PAYMENT_URL = 'https://sandbox.sslcommerz.com/gwprocess/v3/api.php'
 SSLCOMMERZE_VALIDATION_URL = 'https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?wsdl'
 CORS_ALLOW_CREDENTIALS = True

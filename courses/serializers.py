@@ -9,9 +9,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Course
-        banner = serializers.ImageField(use_url=True)
-        exclude = ('created_at','updated_at')  
-        read_only_fields = ["instructor"]   
+        exclude = ('created_at','updated_at')   
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:

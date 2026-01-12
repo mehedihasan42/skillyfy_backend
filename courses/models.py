@@ -19,7 +19,7 @@ class Category(models.Model):
 class Course(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
-    banner = models.ImageField(upload_to='media/course_banners/')
+    banner = models.URLField(max_length=500)
     price = models.FloatField()
     duration = models.FloatField()
     is_active = models.BooleanField()
