@@ -274,9 +274,9 @@ def buy_course(request,course_id):
         'cus_email': request.user.email,
         "tran_id": tran_id,
         "total_amount": course.price,
-        "success_url": "http://localhost:8000/course/payment_success/",
-        "fail_url": "http://localhost:8000/course/payment_fail/",
-        "cancel_url": "http://localhost:8000/course/payment_cancel/",
+        "success_url": "https://skillyfy-backend.onrender.com/course/payment_success/",
+        "fail_url": "https://skillyfy-backend.onrender.com/course/payment_fail/",
+        "cancel_url": "https://skillyfy-backend.onrender.com/course/payment_cancel/",
     }
 
     response = requests.post(settings.SSLCOMMERZE_PAYMENT_URL, data=ssl_data)
