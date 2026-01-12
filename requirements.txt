@@ -16,3 +16,4 @@ idna==3.10
 certifi==2026.1.4
 
 sslcommerz-lib==1.0
+gunicorn==21.2.0
