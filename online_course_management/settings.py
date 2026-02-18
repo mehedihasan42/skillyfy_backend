@@ -63,7 +63,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "https://example.com",
     "https://sub.example.com",
-    "http://localhost:5173",
+    "https://skillyfy-learning.netlify.app",
     "https://skillyfy-learning.netlify.app",
 ]
 
@@ -166,6 +166,6 @@ SIMPLE_JWT = {
 SSLCOMMERZE_STORE_ID = config('SSLCOMMERZE_STORE_ID')
 SSLCOMMERZE_STORE_PASSWORD = config('SSLCOMMERZE_STORE_PASSWORD')
 SSL_COMMERZ_IS_SANDBOX = True 
-SSLCOMMERZE_PAYMENT_URL = 'https://sandbox.sslcommerz.com/gwprocess/v3/api.php'
+SSLCOMMERZE_PAYMENT_URL = 'https://sandbox.sslcommerz.com/gwprocess/v4/api.php'
 SSLCOMMERZE_VALIDATION_URL = 'https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?wsdl'
 CORS_ALLOW_CREDENTIALS = True

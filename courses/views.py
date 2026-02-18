@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from . import models,serializers
 from rest_framework.decorators import api_view,permission_classes,authentication_classes
+from rest_framework.generics import ListCreateAPIView,RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -13,108 +14,72 @@ import uuid
 from django.conf import settings
 import requests
 from django.shortcuts import redirect
+from rest_framework.permissions import BasePermission,AllowAny,SAFE_METHODS
 
 # Create your views here.
-@api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([AllowAny])   # 👈 allow GET without token
-def category_list(request):
+class IsAdmin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'admin'   
 
-    if request.method == 'GET':
-        categories = models.Category.objects.all()
-        serializer = serializers.CategorySerializer(categories, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+class CategoryList(ListCreateAPIView):
+    queryset = models.Category.objects.all()
+    serializer_class = serializers.CategorySerializer
 
-    # 🔐 POST requires authentication
-    elif request.metod == 'POST':
-        if not request.user.is_authenticated or request.user.role != 'admin':
-            return Response(
-                {'detail': 'Forbidden access'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdmin()]
+        return [AllowAny()]
 
-        serializer = serializers.CategorySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
+class CourseListPagination(PageNumberPagination):
+    page_size = 10
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class CourseListCreateApiView(ListCreateAPIView):
+    serializer_class = serializers.CourseSerializer
+    authentication_classes = [JWTAuthentication]
+    pagination_class = CourseListPagination
 
-
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.pagination import PageNumberPagination
-from django.db.models import Q
-from . import models, serializers
-
-@api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([AllowAny])  # Allow GET without token
-def course_list(request):
-    if request.method == 'GET':
+    def get_queryset(self):
+        request = self.request
+        queryset = models.Course.objects.all()
         category = request.query_params.get('category')
         search = request.query_params.get('search')
 
-        # Start with all courses
-        queryset = models.Course.objects.all()
-
-        # Filter by category if provided
         if category:
-            queryset = queryset.filter(category_id=category)
+            queryset = queryset.filter(category_id = category)
 
-        # Filter by search text if provided
         if search:
             queryset = queryset.filter(
-                Q(title__icontains=search) |
-                Q(description__icontains=search)
-            )
+                Q(title__icontains = search) |
+                Q(description__icontains = search)
+            )    
 
-        # if request.user.is_authenticated and getattr(request.user, 'role', None) == 'teacher':
-        #     queryset = queryset.filter(instructor=request.user)
+        if request.user.is_authenticated and request.user.role == 'teacher':
+            queryset = queryset.filter(instructor=request.user)
 
-        # Pagination
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
-        paginated_queryset = paginator.paginate_queryset(queryset, request)
-
-        # print("QUERYSET:", queryset)
-
-        serializer = serializers.CourseSerializer(
-            paginated_queryset,
-            many=True,
-            context={'request': request}
-        )
-        return paginator.get_paginated_response(serializer.data)
-
-    elif request.method == 'POST':
-        # Only admin can create
-        if not request.user.is_authenticated or getattr(request.user, 'role', None) != 'admin':
-            return Response({'detail': 'Forbidden access'}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = serializers.CourseSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def course_detail(request,pk):
-    course = get_object_or_404(models.Course,pk=pk)
-
-    if request.user.role == 'teacher' and course.instructor != request.user:
-       return Response({'details':'You dont have access to see this course'}, status=status.HTTP_403_FORBIDDEN)
+        return queryset
     
-    serializer = serializers.CourseSerializer(course,context={'request':request})
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdmin()]
+        return [AllowAny()]
 
-    return Response(serializer.data,status=status.HTTP_200_OK)
+class CourseDetailApiView(RetrieveUpdateDestroyAPIView):
+    serializer_class = serializers.CourseSerializer
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        queryset = models.Course.objects.all()
+        user = self.request.user
+
+        if user.is_authenticated and user.role == 'teacher':
+            queryset = queryset.filter(instructor=user)
+
+        return queryset
+
+    def get_permissions(self):
+        if self.request.method == ['PUT', 'PATCH', 'DELETE']:
+            return [IsAdmin()]
+        return [AllowAny()]
     
 
 @api_view(['GET','POST'])
@@ -264,6 +229,7 @@ def buy_course(request,course_id):
         amount = course.price,
         status = 'pendding'
     )
+    print('Your trns id is: ',tran_id)
 
     ssl_data = {
         'store_id': settings.SSLCOMMERZE_STORE_ID,
@@ -290,26 +256,38 @@ def buy_course(request,course_id):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def payment_success(request):
-    tran_id = request.data.get('tran_id')
 
-    payment = models.Payment.objects.get(tran_id=tran_id)
+    print("DATA RECEIVED:", request.data)
+
+    tran_id = request.data.get('tran_id')  
+
+    if not tran_id:
+        return Response({"error": "tran_id missing"}, status=400)
+
+    try:
+        payment = models.Payment.objects.get(tran_id=tran_id)
+    except models.Payment.DoesNotExist:
+        return Response({"error": "Payment not found"}, status=404)
 
     payment.status = 'success'
     payment.save()
 
     enrollment_exist = models.Enrollment.objects.filter(
-        student = payment.student,
-        course = payment.course
-    )
+        student=payment.student,
+        course=payment.course
+    ).exists()   # ✅ important fix
 
     if not enrollment_exist:
         models.Enrollment.objects.create(
-            student = payment.student,
-            course = payment.course,
-            price = payment.amount
+            student=payment.student,
+            course=payment.course,
+            price=payment.amount
         )
 
-    return redirect(f"http://localhost:5173/payment-success?tran_id={tran_id}")
+    return redirect(
+        f"https://skillyfy-learning.netlify.app/payment-success?tran_id={tran_id}"
+    )
+
 
 
 @api_view(['POST'])
@@ -317,7 +295,7 @@ def payment_success(request):
 def payment_fail(request):
     tran_id = request.data.get('tran_id')
     models.Payment.objects.filter(tran_id=tran_id).update(status='fail')
-    return redirect(f"http://localhost:5173/payment_fail")
+    return redirect(f"https://skillyfy-learning.netlify.app/payment_fail")
 
 
 @api_view(['POST'])
@@ -325,7 +303,7 @@ def payment_fail(request):
 def payment_cancel(request):
     tran_id = request.data.get('tran_id')
     models.Payment.objects.filter(tran_id=tran_id).update(status='cancel')
-    return redirect(f"http://localhost:5173/payment_cancel")
+    return redirect(f"https://skillyfy-learning.netlify.app/payment_cancel")
 
 
 @api_view(['GET','POST'])
