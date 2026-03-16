@@ -275,7 +275,7 @@ def payment_success(request):
     enrollment_exist = models.Enrollment.objects.filter(
         student=payment.student,
         course=payment.course
-    ).exists()   # ✅ important fix
+    ).exists()   
 
     if not enrollment_exist:
         models.Enrollment.objects.create(

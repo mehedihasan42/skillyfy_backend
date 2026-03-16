@@ -63,7 +63,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "https://example.com",
     "https://sub.example.com",
-    "https://skillyfy-learning.netlify.app",
+    "http://localhost:5173",
     "https://skillyfy-learning.netlify.app",
 ]
 
