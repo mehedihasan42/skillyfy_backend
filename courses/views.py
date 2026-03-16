@@ -77,7 +77,7 @@ class CourseDetailApiView(RetrieveUpdateDestroyAPIView):
         return queryset
 
     def get_permissions(self):
-        if self.request.method == ['PUT', 'PATCH', 'DELETE']:
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAdmin()]
         return [AllowAny()]
     
