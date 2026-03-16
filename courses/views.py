@@ -308,7 +308,7 @@ def payment_success(request):
     )
 
 
-
+@permission_classes([JWTAuthentication])
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def payment_fail(request):
@@ -325,6 +325,7 @@ def payment_cancel(request):
     return redirect(f"https://skillyfy-learning.netlify.app/payment_cancel")
 
 
+@permission_classes([JWTAuthentication])
 @api_view(['GET','POST'])
 def enroll_course(request):
    if request.method == 'POST':
