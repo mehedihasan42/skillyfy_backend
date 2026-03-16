@@ -205,6 +205,33 @@ def enrollment_list(request):
                     return Response(serializer.data)
             else:
                 return Response({'details':'Unauthorized access'},status=status.HTTP_403_FORBIDDEN)
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def is_enrolled(request, course_id):
+
+#     try:
+#         course = models.Course.objects.get(id=course_id)
+#     except models.Course.DoesNotExist:
+#         return Response({'detail': 'Course not found'}, status=404)
+
+#     enrolled = models.Enrollment.objects.filter(
+#         course=course,
+#         student=request.user
+#     ).exists()
+
+#     return Response({"enrolled": enrolled})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def is_enrolled(request, course_id):
+
+    enrolled = models.Enrollment.objects.filter(
+        course_id=course_id,
+        student=request.user
+    ).exists()
+
+    return Response({"enrolled": enrolled})
             
 
 @api_view(['POST'])
@@ -331,18 +358,3 @@ def enroll_course(request):
         return Response(serializer.data)
        
 
-@api_view(['GET'])
-def is_enrolled(request,course_id):
-    if request.user.role != 'student':
-        return Response({'details':'Only students can enroll'},status=status.HTTP_403_FORBIDDEN)
-    
-    enrolled = models.Enrollment.objects.filter(
-        student = request.user,
-        course_id = course_id,
-        is_active = True
-    ).exists()
-
-    if enrolled:
-        return Response({'enrolled':True},status=status.HTTP_200_OK)
-    else:
-        return Response({'enrolled':False},status=status.HTTP_200_OK)
