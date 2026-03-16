@@ -67,10 +67,7 @@ class CourseDetailApiView(RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.CourseSerializer
     queryset = models.Course.objects.all()
 
-    def get_authenticators(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return [JWTAuthentication()]
-        return []
+    authentication_classes = [JWTAuthentication]
 
     def get_permissions(self):
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
