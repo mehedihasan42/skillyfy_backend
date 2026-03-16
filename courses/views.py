@@ -68,13 +68,7 @@ class CourseDetailApiView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
-        queryset = models.Course.objects.all()
-        user = self.request.user
-
-        if user.is_authenticated and user.role == 'teacher':
-            queryset = queryset.filter(instructor=user)
-
-        return queryset
+        return models.Course.objects.all()
 
     def get_permissions(self):
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
